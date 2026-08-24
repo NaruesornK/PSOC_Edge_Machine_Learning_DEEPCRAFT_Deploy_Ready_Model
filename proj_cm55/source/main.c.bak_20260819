@@ -1,0 +1,42 @@
+#include "cybsp.h"
+#include "retarget_io_init.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+// นำเข้าไฟล์เซนเซอร์
+#include "env_sensor.h"
+#include "audio.h"
+#include "env_sensor.h"
+#include "radar_task.h"
+
+int main(void)
+{
+    cy_rslt_t result;
+
+    /* Initialize the device and board peripherals */
+    result = cybsp_init();
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
+
+    __enable_irq();
+    init_retarget_io(); // เปิดการทำงานของ printf
+
+    // ล้างหน้าจอ Terminal
+     //Clear screen (removed ANSI sequence for compatibility)
+    printf("=== BabyMate Sensor Test ===\n");
+
+    // 1. สั่งเปิดเซนเซอร์ SHT40 (มันจะไปแอบทำงานอยู่เบื้องหลังใน env_sensor.c)
+    create_env_sensor_task();
+    printf("[SYS] Environment Sensor task (SHT40 & BMI270) launched!\n");
+    
+    // 2. สั่งเปิดไมค์และ AI จับเสียงเด็กร้อง (ทำงานคู่กันเลยครับ)
+    create_audio_task();
+
+    // 3. เรียก Task ของ Radar (ข้างในยังถูก Comment ปิดไว้อยู่เพื่อความปลอดภัย)
+    create_radar_task();
+
+    /* Start the RTOS scheduler. This function should never return */
+    vTaskStartScheduler();
+}

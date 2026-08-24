@@ -1,0 +1,63 @@
+/*******************************************************************************
+* File: breathing.h
+*
+* BabyMate 2.0 - breathing-rate estimation from BGT60TR13C raw chirps.
+*
+* Pure DSP, no ML. Feeds on the same float[128] buffer that main.c already
+* hands to IMAI_enqueue(), so it can run side by side with the gesture model.
+*
+* Pipeline per frame (~200 Hz):
+*   remove ADC offset -> Hann -> 128-pt range FFT -> pick the range bin that
+*   moves the most -> phase = atan2(Im,Re) -> unwrap -> decimate to ~20 Hz
+*   -> 25.6 s sliding window -> detrend -> Hann -> 512-pt FFT
+*   -> peak inside 9..90 bpm -> parabolic interpolation -> bpm
+*
+* Tuned for preset P0 in radar_settings.h. If you switch presets, update
+* BR_FRAME_RATE_HZ / BR_RANGE_BIN_M below.
+*******************************************************************************/
+
+#ifndef BREATHING_H
+#define BREATHING_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+typedef enum
+{
+    BREATH_STATE_WARMUP = 0,   /* clutter estimate still settling            */
+    BREATH_STATE_NO_TARGET,    /* nothing reflecting in the watched range    */
+    BREATH_STATE_MOVING,       /* target moving too much to measure mm       */
+    BREATH_STATE_MEASURING,    /* target present, no clean periodic peak yet */
+    BREATH_STATE_BREATHING,    /* valid rate                                 */
+    BREATH_STATE_APNEA_ALARM   /* target present, no breathing for N seconds */
+} breath_state_t;
+
+typedef struct
+{
+    breath_state_t state;
+    float          bpm;                 /* breaths per minute                */
+    float          snr;                 /* peak / mean of the search band    */
+    int            range_bin;           /* selected FFT bin                  */
+    float          range_m;             /* its distance in metres            */
+    float          motion_energy;       /* clutter-removed energy of that bin
+                                         * -> READ THIS FIRST RUN to pick
+                                         *   BR_PRESENCE_MIN below           */
+    float          phase_pp_rad;        /* peak-to-peak phase over the window
+                                         * -> used for the "moving" gate     */
+    float          seconds_since_valid; /* drives the apnea alarm            */
+} breath_result_t;
+
+/* Call once, after the radar is initialised. */
+void breathing_init(void);
+
+/*
+ * Call once per radar frame with the same buffer given to IMAI_enqueue().
+ * chirp must hold radar_configs.num_samples_per_frame (128) floats.
+ *
+ * Returns true roughly once per second, when *out holds a fresh result.
+ */
+bool breathing_process_frame(const float *chirp, breath_result_t *out);
+
+const char *breathing_state_name(breath_state_t s);
+
+#endif /* BREATHING_H */

@@ -1,0 +1,110 @@
+Imagimob AI Model Evaluation License Agreement
+ 
+1. Binding Agreement
+
+1.1  Imagimob AB may from time to time make available a pretrained machine learning algorithm, including associated parameters and associated weights, if present, as a ready machine learning model with documentation, in an executable file or other software package (“AI Model”).
+
+1.2  This AI Model Evaluation License Agreement contains the terms and conditions that govern download and use of any AI Model made available by Imagimob for evaluation purposes that may be downloaded from Imagimob´s website, or which otherwise is made available by Imagimob under these terms and conditions. This agreement does not grant any right to use any services or other offerings from Imagimob in addition to the AI Model. For such other services or offerings additional other agreements will apply. To the extent of any conflict between the terms of this Evaluation License Agreement and any service agreement or other agreement with Imagimob the Evaluation License Agreement shall apply and prevail.
+
+1.3  This Evaluation License Agreement is an agreement between Imagimob AB (“Imagimob”) and you or the entity you represent (“Customer”). Thus, “Customer” means (i) in the case of you as an individual accepting this Agreement on your own behalf, you, or (ii) in the case of you accepting this Agreement on behalf of a company or other legal entity, the company or other legal entity that you as an individual are accepting this Agreement for. If you are entering into this Agreement on behalf of a company or other legal entity, you represent that you have the authority to bind such entity to these terms and conditions.
+
+1.4  By (a) clicking a box indicating acceptance, (b) executing an order or entering into another agreement that references this agreement, or (c) downloading, installing, operating or otherwise using an AI Model, you agree to the terms of this Agreement.
+
+1.5  This Agreement is effective between Customer and Imagimob as of the first date of Customer’s accepting this Agreement (the “Effective Date”).
+
+2. License Grant
+
+2.1  Limited license for evaluation purposes only. For a non-renewable, non-extendable period of 60 days (“Evaluation Period”), beginning with the installation date of a copy of the AI Model by Customer, Imagimob, subject to the terms and conditions of this Evaluation License Agreement, grants to Customer a limited, non-exclusive, royalty-free, non-assignable, non-transferable, non-sublicensable license to use the AI Model solely for the purpose to enable Customer to evaluate the AI Model´s suitability for Customer´s internal business needs pertaining to use on specific equipment to determine whether to purchase the non-evaluation version of the Licensed AI Model from Imagimob (“Evaluation”).
+
+2.2  Restrictions. Customer may not, or facilitate or allow others to:
+a) use the AI Model for any other purposes than for the Evaluation;
+b) copy, install, or otherwise use, the AI Model in addition to the number of copies in writing permitted by Imagimob or, in the absence of such individual arrangement, make more than 2 copies of the AI Model;
+c) distribute, make commercial use of, publicly perform, or publicly display the AI Model without separate written permission from Imagimob. The AI Model must be used and reviewed in a secure evaluation environment and properly managed at all times so as to prohibit and prevent access to the AI Model in violation of this Evaluation License Agreement;
+d) port, modify, adapt, translate, make alterations to the AI Model or create derivative works based upon the AI Model;
+e) decompile, reverse engineer, disassemble or otherwise attempt to derive source code, algorithms or the underlying structure of the AI Model (except as permitted by mandatory law which cannot be deviated from by agreement);
+f) remove any product identification, copyright or proprietary notices, or other restrictions from Programs; or
+g) disclose to third parties the results of any testing, technical results or other performance data relating to the Evaluation Materials without Imagimob’s prior written consent.
+
+Customer’s rights under the Evaluation License Agreement will terminate immediately without notice from Imagimob if Customer fails to comply with any provision of the Evaluation License Agreement.
+
+2.3  Third party content. Some content or functionality of the AI Model may be provided to Customer which requires Customer to accept a separate license from a third party. in the event of a conflict between this section 2 (License Grant) and any separate license by a third party, the separate license shall prevail with respect to what is the subject of such separate license.
+
+3. Important notice
+
+3.1  Customer application of the AI Model. Imagimob is not and cannot be aware of the specific application of the AI Model by Customer even if the AI Model is purported to be for use in a specific field or similar. Imagimob takes no responsibility for the AI Model’s suitability to create a specific product and/or other result. Especially Customer acknowledges that, Imagimob has not specifically designed or qualified the software for critical applications, and that the AI Model may contain errors and bugs, and that Customer is required to qualify the AI Model, if used in or for critical applications, and pursuant to applicable local quality, safety and legal requirements, before permitting or giving access to any such use. Especially any output generated by a machine learning model is probabilistic and should be evaluated for accuracy as appropriate for intended use, including by employing human review of such output. Customer undertakes to indemnify Imagimob as provided in section 9.
+
+3.2  Disclaimer. The AI Model and other Licensed Materials are provided “as is” and "as available" except to the extent prohibited by law, or to the extent any statutory rights under applicable law apply that cannot be excluded, limited or waived. Imagimob and Imagimob´s licensors and service providers (a) make no representations or warranties of any kind, whether express, implied, statutory or otherwise regarding the services or Licensed Materials or third-party content, and (b) disclaim all warranties, including any implied or express warranties (a) of merchantability, satisfactory quality, fitness for a particular purpose, non-infringement, or quiet enjoyment, (b) arising out of any course of dealing or usage of trade, (c) that the AI Model or Licensed Materials or any third party content will be uninterrupted, error free or free of harmful components, and (d) that any Input Data, Output Data or other content will be secure or not otherwise lost or altered.
+
+Technical restrictions. Imagimob reserves the right to in the AI Model put in place mechanisms that limit functionality of the AI Model in whole or part during and after the Evaluation Period.
+
+4. Responsibilities upon Customer
+
+4.1  Access to AI Model. It falls upon Customer to have: (a) suitable communication (over the Internet) to the access point (web site etc) from which Imagimob provides the AI Model; and (b) the equipment and software that Imagimob from time to time states is necessary to use the AI Model or which otherwise are apparently necessary for such use.
+
+4.2  Adherence to laws and agreement. Customer shall comply with the terms of this Agreement and all laws applicable to Customer´s use of the AI Model, at all times.
+
+5. Intellectual Property Rights and ownership
+
+5.1  Imagimob or its licensors, as applicable, shall at all times retain ownership of the AI Model as originally downloaded by Customer and all subsequent downloads of the AI Model by Customer. The AI Model (and the copyright, and other intellectual property rights of whatever nature in the AI Model, including any updates or modifications made thereto) are and shall remain the property of Imagimob AB. The AI Model is licensed not sold.
+
+6. Confidentiality
+
+6.1  Imagimob Confidential Information. Imagimob Confidential Information means any and all information, including as pertaining to any information of subcontractors, whether disclosed in writing, orally, electronically or by any other means by Imagimob or through the AI Model, that is designated as confidential or that, given the nature of the information or circumstances surrounding its disclosure, reasonably should be understood to be confidential. Imagimob Confidential Information includes: (a) non-public information relating to technology of and in the AI Model, business plans, promotional and marketing activities, finances and other business affairs; (b) third party information that Imagimob is obligated to keep confidential; and (c) the nature, content and existence of any discussions or negotiations between Customer and Imagimob including on prices. Imagimob Confidential Information does not include any information that: (i) is or becomes publicly available without breach of this Agreement; (ii) can be shown to have been known to Customer at the time of Imagimob´s receipt from Imagimob; (iii) is received from a third party who did not acquire or disclose the same by a wrongful or tortious act; or (iv) can be shown to have been independently developed by Customer without reference to the Imagimob Confidential Information.
+
+6.2  Use of Confidential Information. Customer may use Imagimob Confidential Information only in connection with Customer´s use of the AI Model as permitted under this Agreement and shall not disclose Imagimob Confidential Information to any other person without Imagimob´s prior written consent. The said notwithstanding, Customer may disclose Imagimob Confidential Information on a need-to-know basis to its employees, consultants, and advisors provided that such recipients have entered into customary confidentiality undertakings and that such confidentiality undertaking is sufficient to protect the Imagimob Confidential Information. Customer will take all reasonable measures to avoid disclosure, dissemination, or unauthorized use of Imagimob Confidential Information, including, at a minimum, those measures Customer takes to protect Customer´s own confidential information of a similar nature. Customer shall not be restricted to disclose Imagimob Confidential Information that Customer can show it is required to disclose by law, a competent governmental or administrative agency or body or decision by a competent court of law, but then only, to the extent legally permitted, after prior notification to Imagimob (unless prohibited to do so under Swedish law). Imagimob Confidential Information disclosed under the preceding sentence shall for all other purposes remain Imagimob Confidential Information.
+
+7. Audits
+
+Upon 10 days written notice, Imagimob may, either itself or by appointing a well renowned and independent auditing firm, audit Customer use of the AI Model. Customer agrees to cooperate with Imagimob’s audit and provide reasonable assistance and access to information. Customer agrees that Imagimob shall not be responsible for any of Customer costs incurred in cooperating with the audit.
+
+8. Exclusive remedies and limitation of liability
+
+8.1  Exclusive remedies. If the AI Model fail to substantially conform to the by Imagimob made available specifications or otherwise, Customer´s sole and exclusive remedy is to terminate this Evaluation License Agreement.
+
+8.2  Limitation of liability. In no event shall Imagimob be liable to Customer for damages, including any general, special, incidental or consequential damages arising out of the use or inability to use the AI Model or otherwise arising out of this agreement (including but not limited to loss of data or data being rendered inaccurate or lost profits, cost of procurement of substitute technology or services or losses sustained by Customer or third parties or a failure of the AI Model to operate with any other programs), however caused and on any theory of liability, whether for breach of contract, tort (including negligence) or otherwise. This limitation shall apply even if Imagimob has been advised of the possibility of such damages. Customer acknowledges that the fee paid by Customer for the AI Model, if any, reflects this allocation of risk. These limitations shall apply notwithstanding the failure of essential purpose of any limited remedy.
+
+9. Indemnification
+
+9.1  Customer indemnification. Customer shall defend, indemnify, and hold harmless Imagimob, Imagimob´s affiliates and licensors, and each of their respective employees, officers, directors, and representatives from and against any losses (including reasonable legal fees) arising out of or relating to any third party claim concerning or relating to: (a) Customer use of the AI Model; or (b) breach of this Agreement or violation of applicable law by Customer. Customer shall reimburse Imagimob for reasonable legal fees, as well as Imagimob´s employees’ and contractors’ time and materials spent responding to any third party subpoena or other compulsory legal order or process associated with third party claims described in (a) through (b) above at Imagimob´s then-current hourly rates.
+
+9.2  Imagimob indemnification. Imagimob shall defend, indemnify, and hold harmless Customer and its employees, officers, directors, and representatives from and against any losses (including reasonable legal fees) arising out of or relating to any third party claim that Customer´s use of the AI Model infringes any intellectual property rights of such third party in the European Union (EU).
+
+9.3  Process pertaining to indemnifications. The obligations under this section 11 shall apply only if the party seeking defence or indemnity: (a) gives the other party prompt written notice of the claim; (b) permits the other party to control the defence and settlement of the claim; and (c) reasonably cooperates with the other party (at the other party’s expense) in the defence and settlement of the claim. In no event will a party agree to any settlement of any claim that involves any commitment, other than the payment of money, without the written consent of the other party.
+
+10. Term and termination
+
+10.1  Term. The term of this Agreement will commence on the Effective Date and will remain in effect for the Evaluation Period only.
+
+10.2  Termination for cause. Either party may terminate this Agreement for cause if the other party is in material breach of this Agreement and the material breach remains uncured for a period of 30 days from receipt of notice by the other party. Imagimob may also terminate this Agreement immediately upon notice to Customer if Imagimob´s relationship with a third-party partner who provides software or other technology Imagimob uses to provide the AI Model expires, terminates or requires Imagimob to change the way Imagimob provides software or other technology as part of the AI Model, or (c) in order to comply with the law or requests of governmental entities.
+
+10.3  Duty to delete. Upon the expiration of the Evaluation Period or upon termination of this Evaluation License Agreement for whatever cause, Customer shall delete or destroy all copies of the AI Model in Customer´s control.
+
+10.4  Survival. The Parties’ rights and obligations that by their nature are intended to continue to be in force shall survive the expiration or termination of the Agreement.
+
+11. Export controls
+
+Customer shall comply with all laws and regulations related to export control, including but not limited to those of the U.S., the EU, and Sweden. In particular, Customer shall not export, re-export or transfer any of Imagimob´s (a) information or software, or (b) technologies developed with or utilizing Imagimob technology, in violation of any applicable laws or regulations of the countries named above or any other country or regulatory regime having jurisdiction over an export or re-export of such products, information, software or technologies.
+
+12. Miscellaneous
+
+12.1  No duty to supply. Imagimob assumes no obligation to provide products or information to Customer for evaluation. Imagimob shall have no obligation to provide support for the Licensed AI, or to develop a final version thereof or license any version thereof. Under no circumstances does this Evaluation License Agreement obligate Imagimob in any way to sell, lease, or otherwise provide any ownership interest in, or offer a license to use, the Licensed AI Model during or after the Evaluation Period.
+
+12.2  Marketing and trademarks. Customer hereby authorises Imagimob to mention that Customer is a customer of Imagimob and to use Customer’s trademark and logos in connection therewith. Nothing in this License permits Customer to make use of Imagimob´s trademarks, trade names, logos, unless explicitly so provided in trademark guidelines issued by Imagimob, or to otherwise suggest endorsement or misrepresent the relationship between the Parties, and any rights not expressly granted herein are reserved.
+
+12.3  Amendments. Amendments to this Agreement shall be made in writing and signed by authorised representatives of both Parties to be valid.
+
+12.4  Entire Agreement. This Agreement is the entire agreement between Customer and Imagimob regarding the subject matter of this Agreement. This Agreement supersedes all prior or contemporaneous representations, understandings, agreements, or communications between Customer and Imagimob, whether written or verbal, regarding the subject matter of this Agreement.
+
+12.5  Non-waiver. No failure or delay in exercising any right or remedy under this Agreement will operate as a waiver. No single or partial exercise of any such right or remedy will preclude any other further exercise thereof or of any other right or remedy under this Agreement.
+
+12.6  Remedies. The available remedies and indemnification set out in this Agreement shall be the sole and exclusive remedies available to Customer, unless otherwise explicitly set out in this Agreement or as mandatory under applicable law.
+
+12.7  Severability. If any portion of this Agreement is held to be unenforceable or invalid, the remainder of the provisions shall remain in full force and effect.
+
+13. Governing Law and Dispute Resolution
+
+13.1  Governing Law. This Agreement and any dispute, controversy or claim arising out of or in connection with this Agreement shall be governed by and construed under the laws of Sweden without reference to its conflicts of law principles.
+
+13.2  Dispute Resolution. Any dispute, controversy or claim arising out of or in connection with this Agreement, or the breach, termination or invalidity thereof, shall be finally settled by arbitration administered by the SCC Arbitration Institute (the “SCC”) (Stockholm, Sweden). The Rules for Expedited Arbitrations shall apply, unless the SCC in its discretion determines, taking into account the complexity of the case, the amount in dispute and other circumstances, that the Arbitration Rules shall apply. In the latter case, the SCC shall also decide whether the Arbitral Tribunal shall be composed of one or three arbitrators. The seat of arbitration shall be Stockholm, Sweden. The language to be used in the arbitral proceedings shall be English.
+
+13.3  Arbitration confidentiality. The Parties undertake and agree that all arbitral proceedings conducted with reference to this arbitration clause will be kept strictly confidential. This confidentiality undertaking shall cover, the fact that arbitration has been initiated, all information disclosed in the course of such arbitral proceedings, as well as any decision or award that is made or declared during the proceedings. Information covered by this confidentiality undertaking may not, in any form, be disclosed to a third party without the written consent of all Parties hereto. Notwithstanding the foregoing, a party shall not be prevented from disclosing such information in order to secure its interests against the other party in connection with a dispute or if required to do so by law, any applicable stock exchange regulations or the regulations of any other recognised market place.

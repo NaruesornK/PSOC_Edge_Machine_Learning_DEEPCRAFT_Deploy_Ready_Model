@@ -1,0 +1,61 @@
+#include "cybsp.h"
+#include "retarget_io_init.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+// นำเข้าไฟล์เซนเซอร์
+#include "env_sensor.h"
+#include "audio.h"
+#include "env_sensor.h"
+#include "radar_task.h"
+#include "bmv080_sensor.h"
+
+/* ===================================================================
+ * โหมดทดสอบไฟเลี้ยง BMV080  (ชั่วคราว — ตั้งกลับเป็น 0 เมื่อทดสอบเสร็จ)
+ *
+ * ตั้ง 1 = ปิดเรดาร์กับไมค์ ให้เหลือแต่ BMV080 กับเซนเซอร์ที่กินไฟน้อย
+ *
+ * ทำไม: BMV080 ล้มเหลวที่ขั้นจุดเลเซอร์ (status 113 = ไฟไม่พอ/ไม่นิ่ง)
+ * เรดาร์ BGT60TR13C กับไมค์ PDM กินกระแสจากราง 3.3V เดียวกัน
+ * ถ้าปิดสองตัวนี้แล้ว BMV080 เปิดติด = ยืนยันว่าเป็นเรื่องราง ไม่ใช่โมดูลเสีย
+ * =================================================================== */
+#define BMV080_POWER_TEST   0   /* ทดสอบแล้ว: ปิดเรดาร์+ไมค์ ผลเหมือนเดิม ⇒ ไม่ใช่การแย่งกระแสบนบอร์ด */
+
+int main(void)
+{
+    cy_rslt_t result;
+
+    /* Initialize the device and board peripherals */
+    result = cybsp_init();
+    if (result != CY_RSLT_SUCCESS)
+    {
+        CY_ASSERT(0);
+    }
+
+    __enable_irq();
+    init_retarget_io(); // เปิดการทำงานของ printf
+
+    // ล้างหน้าจอ Terminal
+     //Clear screen (removed ANSI sequence for compatibility)
+    printf("=== BabyMate Sensor Test ===\n");
+
+    // 1. สั่งเปิดเซนเซอร์ SHT40 (มันจะไปแอบทำงานอยู่เบื้องหลังใน env_sensor.c)
+    create_env_sensor_task();
+    printf("[SYS] Environment Sensor task (SHT40 & BMI270) launched!\n");
+    
+#if BMV080_POWER_TEST
+    printf("[SYS] *** BMV080 POWER TEST: radar + audio DISABLED ***\n");
+#else
+    // 2. สั่งเปิดไมค์และ AI จับเสียงเด็กร้อง (ทำงานคู่กันเลยครับ)
+    create_audio_task();
+
+    // 3. เรียก Task ของ Radar (ข้างในยังถูก Comment ปิดไว้อยู่เพื่อความปลอดภัย)
+   create_radar_task();
+#endif
+
+    // 4. เซนเซอร์ฝุ่น BMV080 (PM1 / PM2.5 / PM10) บน I2C ของ camera header
+    create_bmv080_task();
+
+    /* Start the RTOS scheduler. This function should never return */
+    vTaskStartScheduler();
+}

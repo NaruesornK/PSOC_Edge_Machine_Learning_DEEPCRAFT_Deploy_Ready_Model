@@ -1,0 +1,476 @@
+/*******************************************************************************
+* File: breathing.c   -- see breathing.h for the pipeline overview.
+*******************************************************************************/
+
+#include <math.h>
+#include <string.h>
+
+#include "arm_math.h"
+#include "breathing.h"
+
+/*******************************************************************************
+* Radar geometry - derived from preset P0 in radar_settings.h
+*
+*   START 61 020 099 000 Hz .. END 61 479 903 000 Hz  -> B = 459.804 MHz
+*   range bin = c / (2 * B) = 0.32623 m
+*   frame_repetition_time = 0.00500407 s -> 199.837 frames/s
+*   lambda at 61.25 GHz = 4.898 mm
+*******************************************************************************/
+#define BR_N_FAST               128         /* samples per chirp             */
+#define BR_FRAME_RATE_HZ        199.837f
+#define BR_RANGE_BIN_M          0.32623f
+
+/* Slow (breathing) path */
+#define BR_DECIM                10
+#define BR_SLOW_RATE_HZ         (BR_FRAME_RATE_HZ / (float)BR_DECIM)  /* ~20 Hz */
+#define BR_N_SLOW               512         /* 512 / 20 Hz = 25.6 s window    */
+#define BR_UPDATE_EVERY         20          /* emit a result about every 1 s  */
+#define BR_N_SLOW_BINS          (BR_N_SLOW / 2)
+
+/* Range bins to watch: bin 1..12 = 0.33 m .. 4.2 m.
+ * Bin 0 is Tx->Rx leakage, never useful.
+ * Sit the baby around 0.6-0.9 m (bin 2-3) - bin 1 sits next to the leakage
+ * and is the noisiest of the set. */
+#define BR_BIN_MIN              1
+#define BR_BIN_MAX              12
+#define BR_N_BINS               (BR_BIN_MAX - BR_BIN_MIN + 1)
+
+/* Search band: 9..90 bpm covers an adult (12-20) and an infant (30-60),
+ * so you can sanity-check the code on your own chest before using a phantom. */
+#define BR_BPM_MIN              9.0f
+#define BR_BPM_MAX              90.0f
+
+/*******************************************************************************
+* Tunables - the four numbers you will actually adjust
+*******************************************************************************/
+
+/* Clutter tracker. Smaller = slower = treats more of the scene as "static".
+ * 0.002 at 200 Hz is a time constant of about 2.5 s. */
+#define BR_CLUTTER_ALPHA        0.002f
+
+/* Smoothing of the per-bin motion score used to pick the target bin. */
+#define BR_SCORE_ALPHA          0.001f
+
+/* >>> CALIBRATE THIS ONE FIRST <<<
+ * Raw ADC counts, so the absolute value depends on gain and on how far away
+ * the target is. Leave it at 0 on the first run: state will never be
+ * NO_TARGET, and the printed motion_energy tells you what an empty room and
+ * an occupied room actually read. Then set this halfway between the two. */
+#define BR_PRESENCE_MIN         0.0f
+
+/* Peak must stand this far above the mean of the search band to be called
+ * breathing rather than noise. 3.0 is a reasonable starting point. */
+#define BR_SNR_THRESHOLD        3.0f
+
+/* Peak-to-peak unwrapped phase over the window, in radians. 5 mm of chest
+ * travel is about 12.8 rad, so anything past ~40 rad is gross body movement,
+ * not breathing. */
+#define BR_MOVING_PP_RAD        40.0f
+
+/* No valid breathing for this long, while a target is still present. */
+#define BR_APNEA_SECONDS        15.0f
+
+/* Ignore the first seconds while the clutter EMA settles. */
+#define BR_WARMUP_SECONDS       4.0f
+
+#define BR_PI                   3.14159265358979f
+
+/*******************************************************************************
+* State
+*******************************************************************************/
+static arm_rfft_fast_instance_f32 br_fft_fast;
+static arm_rfft_fast_instance_f32 br_fft_slow;
+
+static float br_hann_fast[BR_N_FAST];
+static float br_hann_slow[BR_N_SLOW];
+
+/* clutter (static scene) estimate and motion score, per watched range bin */
+static float br_ema_re[BR_N_BINS];
+static float br_ema_im[BR_N_BINS];
+static float br_score[BR_N_BINS];
+
+static uint32_t br_frame_count;
+static bool     br_locked;
+static int      br_sel_bin;             /* index into 0..BR_N_BINS-1         */
+
+/* phase unwrapping */
+static bool  br_phase_init;
+static float br_phase_prev;
+static float br_phase_acc;
+
+/* slow ring buffer of unwrapped phase */
+static float br_slow_buf[BR_N_SLOW];
+static int   br_slow_head;
+static int   br_slow_filled;
+static int   br_decim_count;
+static int   br_since_update;
+
+/* scratch */
+static float br_fast_in[BR_N_FAST];
+static float br_fast_spec[BR_N_FAST];
+static float br_slow_in[BR_N_SLOW];
+static float br_slow_spec[BR_N_SLOW];
+static float br_mag[BR_N_SLOW_BINS];
+
+static float br_sec_since_valid;
+
+/*******************************************************************************
+* Helpers
+*******************************************************************************/
+static void br_make_hann(float *w, int n)
+{
+    int i;
+    for (i = 0; i < n; i++)
+    {
+        w[i] = 0.5f * (1.0f - cosf(2.0f * BR_PI * (float)i / (float)(n - 1)));
+    }
+}
+
+const char *breathing_state_name(breath_state_t s)
+{
+    switch (s)
+    {
+        case BREATH_STATE_WARMUP:      return "WARMUP";
+        case BREATH_STATE_NO_TARGET:   return "NO TARGET";
+        case BREATH_STATE_MOVING:      return "MOVING";
+        case BREATH_STATE_MEASURING:   return "MEASURING";
+        case BREATH_STATE_BREATHING:   return "BREATHING";
+        case BREATH_STATE_APNEA_ALARM: return "*** APNEA ALARM ***";
+        default:                       return "?";
+    }
+}
+
+/*******************************************************************************
+* breathing_init
+*******************************************************************************/
+void breathing_init(void)
+{
+    arm_rfft_fast_init_f32(&br_fft_fast, BR_N_FAST);
+    arm_rfft_fast_init_f32(&br_fft_slow, BR_N_SLOW);
+
+    br_make_hann(br_hann_fast, BR_N_FAST);
+    br_make_hann(br_hann_slow, BR_N_SLOW);
+
+    memset(br_ema_re, 0, sizeof(br_ema_re));
+    memset(br_ema_im, 0, sizeof(br_ema_im));
+    memset(br_score,  0, sizeof(br_score));
+    memset(br_slow_buf, 0, sizeof(br_slow_buf));
+
+    br_frame_count     = 0u;
+    br_locked          = false;
+    br_sel_bin         = 0;
+    br_phase_init      = false;
+    br_phase_prev      = 0.0f;
+    br_phase_acc       = 0.0f;
+    br_slow_head       = 0;
+    br_slow_filled     = 0;
+    br_decim_count     = 0;
+    br_since_update    = 0;
+    br_sec_since_valid = 0.0f;
+}
+
+/*******************************************************************************
+* breathing_process_frame
+*******************************************************************************/
+bool breathing_process_frame(const float *chirp, breath_result_t *out)
+{
+    int   i, k;
+    float mean;
+    float best_score;
+    int   best_bin;
+
+    /*--------------------------------------------------------------------------
+    * 1. Strip the ADC offset, then window. Skipping the offset removal dumps a
+    *    huge spike into bin 0 that leaks into the bins we care about.
+    *------------------------------------------------------------------------*/
+    mean = 0.0f;
+    for (i = 0; i < BR_N_FAST; i++)
+    {
+        mean += chirp[i];
+    }
+    mean /= (float)BR_N_FAST;
+
+    for (i = 0; i < BR_N_FAST; i++)
+    {
+        br_fast_in[i] = (chirp[i] - mean) * br_hann_fast[i];
+    }
+
+    /*--------------------------------------------------------------------------
+    * 2. Range FFT. Output packing of arm_rfft_fast_f32 for N real inputs:
+    *       spec[0]        = real part of bin 0    (DC)
+    *       spec[1]        = real part of bin N/2  (Nyquist)
+    *       spec[2k],[2k+1] = real, imag of bin k   for k = 1 .. N/2-1
+    *------------------------------------------------------------------------*/
+    arm_rfft_fast_f32(&br_fft_fast, br_fast_in, br_fast_spec, 0);
+
+    /*--------------------------------------------------------------------------
+    * 3. Per bin: track the static scene with an EMA, and score how much the
+    *    bin departs from it. That score answers "which range bin is moving?"
+    *    -- the wall is bright but never moves, so it scores near zero.
+    *------------------------------------------------------------------------*/
+    best_score = -1.0f;
+    best_bin   = 0;
+
+    for (i = 0; i < BR_N_BINS; i++)
+    {
+        float re, im, dre, dim, e;
+
+        k  = BR_BIN_MIN + i;
+        re = br_fast_spec[2 * k];
+        im = br_fast_spec[2 * k + 1];
+
+        br_ema_re[i] += BR_CLUTTER_ALPHA * (re - br_ema_re[i]);
+        br_ema_im[i] += BR_CLUTTER_ALPHA * (im - br_ema_im[i]);
+
+        dre = re - br_ema_re[i];
+        dim = im - br_ema_im[i];
+        e   = (dre * dre) + (dim * dim);
+
+        br_score[i] += BR_SCORE_ALPHA * (e - br_score[i]);
+
+        if (br_score[i] > best_score)
+        {
+            best_score = br_score[i];
+            best_bin   = i;
+        }
+    }
+
+    br_frame_count++;
+
+    if (!br_locked)
+    {
+        if ((float)br_frame_count >= (BR_WARMUP_SECONDS * BR_FRAME_RATE_HZ))
+        {
+            br_sel_bin    = best_bin;
+            br_locked     = true;
+            br_phase_init = false;
+        }
+        return false;
+    }
+
+    /*--------------------------------------------------------------------------
+    * 4. Phase of the selected bin, from the RAW complex value.
+    *
+    *    Note we deliberately do not use the clutter-removed value here. Even
+    *    when static clutter dominates the bin, the phase of the sum still
+    *    oscillates at the breathing rate -- and the rate is all we need.
+    *
+    *    Chest travel of 5 mm is 4*pi*5/4.898 = 12.8 rad, i.e. two full wraps,
+    *    so unwrapping is mandatory, not optional.
+    *------------------------------------------------------------------------*/
+    {
+        float re, im, ph, d;
+
+        k  = BR_BIN_MIN + br_sel_bin;
+        re = br_fast_spec[2 * k];
+        im = br_fast_spec[2 * k + 1];
+
+        ph = atan2f(im, re);
+
+        if (!br_phase_init)
+        {
+            br_phase_prev = ph;
+            br_phase_acc  = 0.0f;
+            br_phase_init = true;
+        }
+
+        d = ph - br_phase_prev;
+        while (d >  BR_PI) { d -= 2.0f * BR_PI; }
+        while (d < -BR_PI) { d += 2.0f * BR_PI; }
+
+        br_phase_acc += d;
+        br_phase_prev = ph;
+    }
+
+    /*--------------------------------------------------------------------------
+    * 5. Decimate 200 Hz -> ~20 Hz. Breathing tops out near 1.5 Hz, so 20 Hz is
+    *    already 13x oversampled; keeping 200 Hz would just cost a 5120-point
+    *    FFT for the same answer.
+    *------------------------------------------------------------------------*/
+    br_decim_count++;
+    if (br_decim_count < BR_DECIM)
+    {
+        return false;
+    }
+    br_decim_count = 0;
+
+    br_slow_buf[br_slow_head] = br_phase_acc;
+    br_slow_head = (br_slow_head + 1) % BR_N_SLOW;
+    if (br_slow_filled < BR_N_SLOW)
+    {
+        br_slow_filled++;
+    }
+    br_since_update++;
+
+    if ((br_slow_filled < BR_N_SLOW) || (br_since_update < BR_UPDATE_EVERY))
+    {
+        return false;
+    }
+    br_since_update = 0;
+
+    /*--------------------------------------------------------------------------
+    * 6. Once a second: copy the window out in time order, remove mean and
+    *    slope (the unwrapped phase drifts), measure peak-to-peak for the
+    *    movement gate, window, transform.
+    *------------------------------------------------------------------------*/
+    {
+        float m = 0.0f;
+        float num = 0.0f, den = 0.0f, slope, x;
+        float mn, mx, pp;
+        int   kmin, kmax, peak_k;
+        float peak, sum, meanmag, snr, delta, freq, bpm, dt;
+        breath_state_t st;
+
+        for (i = 0; i < BR_N_SLOW; i++)
+        {
+            br_slow_in[i] = br_slow_buf[(br_slow_head + i) % BR_N_SLOW];
+            m += br_slow_in[i];
+        }
+        m /= (float)BR_N_SLOW;
+
+        for (i = 0; i < BR_N_SLOW; i++)
+        {
+            x    = (float)i - ((float)(BR_N_SLOW - 1) * 0.5f);
+            num += x * (br_slow_in[i] - m);
+            den += x * x;
+        }
+        slope = num / den;
+
+        mn = 1e30f;
+        mx = -1e30f;
+        for (i = 0; i < BR_N_SLOW; i++)
+        {
+            x = (float)i - ((float)(BR_N_SLOW - 1) * 0.5f);
+            br_slow_in[i] = br_slow_in[i] - m - (slope * x);
+            if (br_slow_in[i] < mn) { mn = br_slow_in[i]; }
+            if (br_slow_in[i] > mx) { mx = br_slow_in[i]; }
+        }
+        pp = mx - mn;
+
+        for (i = 0; i < BR_N_SLOW; i++)
+        {
+            br_slow_in[i] *= br_hann_slow[i];
+        }
+
+        arm_rfft_fast_f32(&br_fft_slow, br_slow_in, br_slow_spec, 0);
+
+        /*----------------------------------------------------------------------
+        * 7. Peak inside the breathing band.
+        *    bin k  <->  k * BR_SLOW_RATE_HZ / BR_N_SLOW  Hz  (0.039 Hz = 2.3 bpm)
+        *--------------------------------------------------------------------*/
+        kmin = (int)(((BR_BPM_MIN / 60.0f) * (float)BR_N_SLOW / BR_SLOW_RATE_HZ) + 0.5f);
+        kmax = (int)(((BR_BPM_MAX / 60.0f) * (float)BR_N_SLOW / BR_SLOW_RATE_HZ) + 0.5f);
+        if (kmin < 1)                   { kmin = 1; }
+        if (kmax > BR_N_SLOW_BINS - 2)  { kmax = BR_N_SLOW_BINS - 2; }
+
+        peak   = 0.0f;
+        peak_k = kmin;
+        sum    = 0.0f;
+
+        for (k = kmin; k <= kmax; k++)
+        {
+            float rr = br_slow_spec[2 * k];
+            float ii = br_slow_spec[2 * k + 1];
+            float mg = sqrtf((rr * rr) + (ii * ii));
+
+            br_mag[k] = mg;
+            sum += mg;
+
+            if (mg > peak)
+            {
+                peak   = mg;
+                peak_k = k;
+            }
+        }
+
+        meanmag = sum / (float)(kmax - kmin + 1);
+        snr     = (meanmag > 1e-12f) ? (peak / meanmag) : 0.0f;
+
+        /* Parabolic interpolation: the true peak rarely lands exactly on a bin,
+         * and without this the readout quantises to 2.3 bpm steps. */
+        delta = 0.0f;
+        if ((peak_k > kmin) && (peak_k < kmax))
+        {
+            float a  = br_mag[peak_k - 1];
+            float b  = br_mag[peak_k];
+            float c  = br_mag[peak_k + 1];
+            float dn = a - (2.0f * b) + c;
+
+            if (fabsf(dn) > 1e-12f)
+            {
+                delta = 0.5f * (a - c) / dn;
+            }
+            if (delta >  0.5f) { delta =  0.5f; }
+            if (delta < -0.5f) { delta = -0.5f; }
+        }
+
+        freq = ((float)peak_k + delta) * BR_SLOW_RATE_HZ / (float)BR_N_SLOW;
+        bpm  = freq * 60.0f;
+
+        /*----------------------------------------------------------------------
+        * 8. State machine.
+        *--------------------------------------------------------------------*/
+        dt = (float)BR_UPDATE_EVERY / BR_SLOW_RATE_HZ;   /* about 1 s */
+
+        if (br_score[br_sel_bin] < BR_PRESENCE_MIN)
+        {
+            st = BREATH_STATE_NO_TARGET;
+        }
+        else if (pp > BR_MOVING_PP_RAD)
+        {
+            st = BREATH_STATE_MOVING;
+        }
+        else if (snr >= BR_SNR_THRESHOLD)
+        {
+            st = BREATH_STATE_BREATHING;
+        }
+        else
+        {
+            st = BREATH_STATE_MEASURING;
+        }
+
+        /* A squirming baby is a living baby: movement resets the apnea clock. */
+        if ((st == BREATH_STATE_BREATHING) || (st == BREATH_STATE_MOVING))
+        {
+            br_sec_since_valid = 0.0f;
+        }
+        else
+        {
+            br_sec_since_valid += dt;
+        }
+
+        if ((st != BREATH_STATE_NO_TARGET) &&
+            (br_sec_since_valid >= BR_APNEA_SECONDS))
+        {
+            st = BREATH_STATE_APNEA_ALARM;
+        }
+
+        /*----------------------------------------------------------------------
+        * 9. Allow the target bin to move, but only on a clear win, and reset
+        *    the phase history when it does - the old unwrapped phase belongs
+        *    to a different reflector.
+        *--------------------------------------------------------------------*/
+        if ((best_bin != br_sel_bin) &&
+            (best_score > (1.5f * br_score[br_sel_bin])))
+        {
+            br_sel_bin     = best_bin;
+            br_phase_init  = false;
+            br_slow_filled = 0;
+            br_slow_head   = 0;
+        }
+
+        if (out != NULL)
+        {
+            out->state               = st;
+            out->bpm                 = bpm;
+            out->snr                 = snr;
+            out->range_bin           = BR_BIN_MIN + br_sel_bin;
+            out->range_m             = (float)(BR_BIN_MIN + br_sel_bin) * BR_RANGE_BIN_M;
+            out->motion_energy       = br_score[br_sel_bin];
+            out->phase_pp_rad        = pp;
+            out->seconds_since_valid = br_sec_since_valid;
+        }
+
+        return true;
+    }
+}
